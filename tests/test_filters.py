@@ -8,6 +8,7 @@ import django
 from django import forms
 from django.test import TestCase, override_settings
 from django.utils import translation
+from django.utils import timezone
 from django.utils.translation import gettext as _
 
 from django_filters import filters, widgets
@@ -1125,16 +1126,16 @@ class DateRangeFilterTests(TestCase):
 
     def test_filtering_for_this_year(self):
         qs = mock.Mock(spec=["filter"])
-        with mock.patch("django_filters.filters.now") as mock_now:
-            now_dt = mock_now.return_value
+        with mock.patch("django_filters.filters.timezone.now") as mock_now:
+            now_dt = timezone.localtime(mock_now.return_value)
             f = DateRangeFilter()
             f.filter(qs, "year")
             qs.filter.assert_called_once_with(None__year=now_dt.year)
 
     def test_filtering_for_this_month(self):
         qs = mock.Mock(spec=["filter"])
-        with mock.patch("django_filters.filters.now") as mock_now:
-            now_dt = mock_now.return_value
+        with mock.patch("django_filters.filters.timezone.now") as mock_now:
+            now_dt = timezone.localtime(mock_now.return_value)
             f = DateRangeFilter()
             f.filter(qs, "month")
             qs.filter.assert_called_once_with(
@@ -1143,7 +1144,7 @@ class DateRangeFilterTests(TestCase):
 
     def test_filtering_for_7_days(self):
         qs = mock.Mock(spec=["filter"])
-        with mock.patch("django_filters.filters.now"), mock.patch(
+        with mock.patch("django_filters.filters.timezone.now"), mock.patch(
             "django_filters.filters.timedelta"
         ) as mock_td, mock.patch("django_filters.filters._truncate") as mock_truncate:
             mock_d1, mock_d2 = mock.MagicMock(), mock.MagicMock()
@@ -1157,8 +1158,8 @@ class DateRangeFilterTests(TestCase):
 
     def test_filtering_for_today(self):
         qs = mock.Mock(spec=["filter"])
-        with mock.patch("django_filters.filters.now") as mock_now:
-            now_dt = mock_now.return_value
+        with mock.patch("django_filters.filters.timezone.now") as mock_now:
+            now_dt = timezone.localtime(mock_now.return_value)
             f = DateRangeFilter()
             f.filter(qs, "today")
             qs.filter.assert_called_once_with(
@@ -1167,8 +1168,8 @@ class DateRangeFilterTests(TestCase):
 
     def test_filtering_for_yesterday(self):
         qs = mock.Mock(spec=["filter"])
-        with mock.patch("django_filters.filters.now") as mock_now:
-            now_dt = mock_now.return_value
+        with mock.patch("django_filters.filters.timezone.now") as mock_now:
+            now_dt = timezone.localtime(mock_now.return_value)
             f = DateRangeFilter()
             f.filter(qs, "yesterday")
             qs.filter.assert_called_once_with(

@@ -9,7 +9,7 @@ from django import forms
 from django.http import QueryDict
 from django.test import TestCase, override_settings
 from django.utils import timezone
-from django.utils.timezone import make_aware, now
+from django.utils.timezone import make_aware, now, localtime
 
 from django_filters.filters import (
     AllValuesFilter,
@@ -756,7 +756,7 @@ class DateRangeFilterTests(TestCase):
 
     @contextlib.contextmanager
     def relative_to(self, today):
-        today = make_aware(today)
+        today = localtime(make_aware(today))
         yesterday = today - datetime.timedelta(days=1)
         five_days_ago = today - datetime.timedelta(days=5)
         two_weeks_ago = today - datetime.timedelta(days=14)
@@ -772,7 +772,7 @@ class DateRangeFilterTests(TestCase):
         Comment.objects.create(date=yesterday, author=alex, time=time)
         Comment.objects.create(date=two_months_ago, author=alex, time=time)
 
-        with mock.patch("django_filters.filters.now") as mock_now:
+        with mock.patch("django_filters.filters.timezone.now") as mock_now:
             mock_now.return_value = today
             yield
 
@@ -793,7 +793,7 @@ class DateRangeFilterTests(TestCase):
 
     def test_filtering_for_yesterday(self):
         f = self.CommentFilter({"date": "yesterday"})
-        with self.relative_to(datetime.datetime(now().year, 1, 1)):
+        with self.relative_to(datetime.datetime(localtime(now()).year, 1, 1)):
             self.assertQuerySetEqual(f.qs, [5], lambda o: o.pk, False)
 
     def test_filtering_for_today(self):

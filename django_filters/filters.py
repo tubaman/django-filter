@@ -8,7 +8,7 @@ from django.core.validators import MaxValueValidator
 from django.db.models import Q
 from django.db.models.constants import LOOKUP_SEP
 from django.forms.utils import pretty_name
-from django.utils.timezone import now
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from .conf import settings
@@ -442,6 +442,7 @@ def _truncate(dt):
 
 
 class DateRangeFilter(ChoiceFilter):
+
     choices = [
         ("today", _("Today")),
         ("yesterday", _("Yesterday")),
@@ -450,42 +451,52 @@ class DateRangeFilter(ChoiceFilter):
         ("year", _("This year")),
     ]
 
-    filters = {
-        "today": lambda qs, name: qs.filter(
-            **{
-                "%s__year" % name: now().year,
-                "%s__month" % name: now().month,
-                "%s__day" % name: now().day,
-            }
-        ),
-        "yesterday": lambda qs, name: qs.filter(
-            **{
-                "%s__year" % name: (now() - timedelta(days=1)).year,
-                "%s__month" % name: (now() - timedelta(days=1)).month,
-                "%s__day" % name: (now() - timedelta(days=1)).day,
-            }
-        ),
-        "week": lambda qs, name: qs.filter(
-            **{
-                "%s__gte" % name: _truncate(now() - timedelta(days=7)),
-                "%s__lt" % name: _truncate(now() + timedelta(days=1)),
-            }
-        ),
-        "month": lambda qs, name: qs.filter(
-            **{"%s__year" % name: now().year, "%s__month" % name: now().month}
-        ),
-        "year": lambda qs, name: qs.filter(
-            **{
-                "%s__year" % name: now().year,
-            }
-        ),
-    }
+    def get_filters(self):
+        now = timezone.now()
+        # When time zone support is enabled, convert "now" to the user's time
+        # zone so Django's definition of "Today" matches what the user expects
+        if timezone.is_aware(now):
+            now = timezone.localtime(now)
+
+        return {
+            "today": lambda qs, name: qs.filter(
+                **{
+                    "%s__year" % name: now.year,
+                    "%s__month" % name: now.month,
+                    "%s__day" % name: now.day,
+                }
+            ),
+            "yesterday": lambda qs, name: qs.filter(
+                **{
+                    "%s__year" % name: (now - timedelta(days=1)).year,
+                    "%s__month" % name: (now - timedelta(days=1)).month,
+                    "%s__day" % name: (now - timedelta(days=1)).day,
+                }
+            ),
+            "week": lambda qs, name: qs.filter(
+                **{
+                    "%s__gte" % name: _truncate(now - timedelta(days=7)),
+                    "%s__lt" % name: _truncate(now + timedelta(days=1)),
+                }
+            ),
+            "month": lambda qs, name: qs.filter(
+                **{"%s__year" % name: now.year, "%s__month" % name: now.month}
+            ),
+            "year": lambda qs, name: qs.filter(
+                **{
+                    "%s__year" % name: now.year,
+                }
+            ),
+        }
 
     def __init__(self, choices=None, filters=None, *args, **kwargs):
         if choices is not None:
             self.choices = choices
+
         if filters is not None:
             self.filters = filters
+        else:
+            self.filters = self.get_filters()
 
         if isinstance(self.choices, dict):
             if DJANGO_50:
